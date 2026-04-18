@@ -1,0 +1,28 @@
+# Nim build artifacts
+nimcache/
+nimblecache/
+*.exe
+*.out
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Test binaries
+tests/test_tagger
+tests/debug_mecab
+
+# Nimble
+*.nimble.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
