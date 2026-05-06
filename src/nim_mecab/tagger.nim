@@ -10,7 +10,7 @@
 ##     echo t.surface, " ", t.pos, " ", t.baseForm
 ##   tagger.destroy()
 
-import std/[strutils, options]
+import std/[strutils, options, unicode]
 import ./ffi
 
 type
@@ -100,3 +100,32 @@ proc contentTokens*(tagger: MecabTagger, text: string): seq[string] {.raises: []
     if t.pos == "名詞" and t.posDetail1 == "接尾":
       continue
     result.add(t.baseForm)
+
+proc containsKanji*(s: string): bool {.raises: [].} =
+  ## True if any rune in `s` falls in the CJK unified ideographs range.
+  for r in s.runes:
+    let cp = int32(r)
+    if (cp >= 0x4E00 and cp <= 0x9FFF) or
+       (cp >= 0x3400 and cp <= 0x4DBF) or
+       (cp >= 0x20000 and cp <= 0x2A6DF):
+      return true
+  return false
+
+proc kanaize*(tagger: MecabTagger, text: string): string {.raises: [].} =
+  ## Replace kanji-bearing tokens with their MeCab `reading` (katakana).
+  ## Hiragana / katakana / ASCII / punctuation tokens are passed through
+  ## verbatim. Tokens whose `reading` is empty (unknown words, single
+  ## punctuation) fall back to `surface`. The output is intended for TTS
+  ## engines that mishandle kanji directly — pre-converting to katakana
+  ## stabilises pronunciation while preserving non-kanji segments.
+  if tagger.handle.isNil or text.len == 0:
+    return text
+  let tokens = tagger.tokenize(text)
+  if tokens.len == 0:
+    return text
+  result = newStringOfCap(text.len * 2)
+  for t in tokens:
+    if t.reading.len > 0 and t.surface.containsKanji():
+      result.add(t.reading)
+    else:
+      result.add(t.surface)

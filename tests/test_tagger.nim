@@ -1,4 +1,4 @@
-import std/[unittest, sequtils, options]
+import std/[unittest, sequtils, options, strutils]
 import ../src/nim_mecab/tagger
 
 suite "parseMecabLine":
@@ -238,4 +238,55 @@ suite "contentTokens":
     let content = tagger.contentTokens("水を出す")
     for word in content:
       check word.len > 0  # no empty strings in output
+    tagger.destroy()
+
+
+suite "kanaize":
+
+  test "Given empty text, When kanaize, Then empty string":
+    var tagger = newMecabTagger()
+    check tagger.kanaize("") == ""
+    tagger.destroy()
+
+  test "Given destroyed tagger, When kanaize, Then text unchanged":
+    var tagger = newMecabTagger()
+    tagger.destroy()
+    check tagger.kanaize("テスト") == "テスト"
+
+  test "Given hiragana only, When kanaize, Then unchanged":
+    var tagger = newMecabTagger()
+    let result = tagger.kanaize("こんにちは")
+    check result == "こんにちは"
+    tagger.destroy()
+
+  test "Given katakana only, When kanaize, Then unchanged":
+    var tagger = newMecabTagger()
+    let result = tagger.kanaize("マザーボード")
+    check result == "マザーボード"
+    tagger.destroy()
+
+  test "Given ASCII only, When kanaize, Then unchanged":
+    var tagger = newMecabTagger()
+    check tagger.kanaize("hello") == "hello"
+    tagger.destroy()
+
+  test "Given kanji noun, When kanaize, Then katakana reading":
+    var tagger = newMecabTagger()
+    let result = tagger.kanaize("水")
+    check result == "ミズ"
+    tagger.destroy()
+
+  test "Given mixed kanji + hiragana, When kanaize, Then kanji replaced only":
+    var tagger = newMecabTagger()
+    let result = tagger.kanaize("水を出す")
+    # 水→ミズ replaced, を unchanged, 出す→ダス replaced
+    check "ミズ" in result
+    check "を" in result
+    tagger.destroy()
+
+  test "Given punctuation, When kanaize, Then preserved":
+    var tagger = newMecabTagger()
+    let result = tagger.kanaize("水。")
+    check "ミズ" in result
+    check "。" in result
     tagger.destroy()
